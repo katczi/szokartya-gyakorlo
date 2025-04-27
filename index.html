@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Szókártya Drag & Drop</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            text-align: center;
+        }
+        #inputText {
+            width: 100%;
+            height: 100px;
+            margin-bottom: 20px;
+        }
+        #slotsContainer, #wordBank {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 20px;
+            min-height: 60px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .slot, .wordCard {
+            padding: 10px 15px;
+            margin: 5px;
+            min-width: 60px;
+            min-height: 30px;
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+        }
+        .slot {
+            background: #ffffff;
+        }
+        .wrong {
+            background-color: #ffcccc !important;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<h2>Szókártya gyakorlás</h2>
+<textarea id="inputText" placeholder="Illessz be egy szöveget ide..."></textarea><br>
+<button id="startButton">Gyakorlás indítása</button>
+
+<div id="slotsContainer"></div>
+<div id="wordBank"></div>
+
+<button id="checkButton" class="hidden">Ellenőrzés</button>
+<button id="prevButton" class="hidden">Előző mondat</button>
+<button id="nextButton" class="hidden">Következő mondat</button>
+<button id="homeButton" class="hidden">Vissza a főoldalra</button>
+
+<p id="feedback"></p>
+<p id="solution"></p>
+
+<script>
+    let sentences = [];
+    let currentSentenceIndex = 0;
+    let correctWords = [];
+
+    document.getElementById('startButton').addEventListener('click', () => {
+        const text = document.getElementById('inputText').value;
+        sentences = text.match(/[^.!?]+[.!?]/g) || [];
+        currentSentenceIndex = 0;
+        if (sentences.length > 0) {
+            document.getElementById('inputText').classList.add('hidden');
+            document.getElementById('startButton').classList.add('hidden');
+            document.getElementById('checkButton').classList.remove('hidden');
+            document.getElementById('prevButton').classList.remove('hidden');
+            document.getElementById('nextButton').classList.remove('hidden');
+            document.getElementById('homeButton').classList.remove('hidden');
+            loadSentence();
+        }
+    });
+
+    function loadSentence() {
+        document.getElementById('feedback').innerText = '';
+        document.getElementById('solution').innerText = '';
+
+        const sentence = sentences[currentSentenceIndex].trim();
+        correctWords = sentence.replace(/[.,!?]/g, '').split(/\s+/);
+        const shuffledWords = [...correctWords].sort(() => Math.random() - 0.5);
+
+        const slotsContainer = document.getElementById('slotsContainer');
+        const wordBank = document.getElementById('wordBank');
+        slotsContainer.innerHTML = '';
+        wordBank.innerHTML = '';
+
+        correctWords.forEach(() => {
+            const slot = document.createElement('div');
+            slot.className = 'slot';
+            slot.addEventListener('dragover', e => e.preventDefault());
+            slot.addEventListener('drop', e => {
+                if (slot.innerText.trim() === '') {
+                    const data = e.dataTransfer.getData('text/plain');
+                    slot.innerText = data;
+                    const dragging = document.querySelector('.dragging');
+                    if (dragging) dragging.remove();
+                }
+            });
+            slotsContainer.appendChild(slot);
+        });
+
+        shuffledWords.forEach(word => {
+            const card = document.createElement('div');
+            card.className = 'wordCard';
+            card.draggable = true;
+            card.innerText = word;
+            card.addEventListener('dragstart', e => {
+                e.dataTransfer.setData('text/plain', e.target.innerText);
+                e.target.classList.add('dragging');
+            });
+            card.addEventListener('dragend', e => {
+                e.target.classList.remove('dragging');
+            });
+            wordBank.appendChild(card);
+        });
+    }
+
+    document.getElementById('checkButton').addEventListener('click', () => {
+        const userWords = Array.from(document.querySelectorAll('.slot')).map(slot => slot.innerText.trim());
+
+        document.querySelectorAll('.slot').forEach((slot, index) => {
+            slot.classList.remove('wrong');
+            if (userWords[index] !== correctWords[index]) {
+                slot.classList.add('wrong');
+            }
+        });
+
+        if (JSON.stringify(userWords) === JSON.stringify(correctWords)) {
+            document.getElementById('feedback').innerText = 'Helyes! 🎉';
+        } else {
+            document.getElementById('feedback').innerText = 'Nem jó sorrend! Nézd meg a piros szavakat.';
+            document.getElementById('solution').innerText = 'Helyes sorrend: ' + correctWords.join(' ');
+        }
+    });
+
+    document.getElementById('nextButton').addEventListener('click', () => {
+        if (currentSentenceIndex < sentences.length - 1) {
+            currentSentenceIndex++;
+            loadSentence();
+        }
+    });
+
+    document.getElementById('prevButton').addEventListener('click', () => {
+        if (currentSentenceIndex > 0) {
+            currentSentenceIndex--;
+            loadSentence();
+        }
+    });
+
+    document.getElementById('homeButton').addEventListener('click', () => {
+        document.getElementById('inputText').classList.remove('hidden');
+        document.getElementById('startButton').classList.remove('hidden');
+        document.getElementById('checkButton').classList.add('hidden');
+        document.getElementById('prevButton').classList.add('hidden');
+        document.getElementById('nextButton').classList.add('hidden');
+        document.getElementById('homeButton').classList.add('hidden');
+        document.getElementById('slotsContainer').innerHTML = '';
+        document.getElementById('wordBank').innerHTML = '';
+        document.getElementById('feedback').innerText = '';
+        document.getElementById('solution').innerText = '';
+    });
+</script>
+
+</body>
+</html>
